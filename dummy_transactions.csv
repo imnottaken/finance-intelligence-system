@@ -1,0 +1,11 @@
+date,description,amount,merchant
+2023-10-01,Grocery Store Purchase,45.50,Whole Foods
+2023-10-02,Uber Ride to Work,15.20,Uber
+2023-10-03,Netflix Subscription,15.99,Netflix
+2023-10-05,Dinner with friends,85.00,Italian Bistro
+2023-10-10,Monthly Rent Payment,1200.00,Landlord
+2023-10-12,Gas Station Fuel,40.00,Shell
+2023-10-15,New Laptop - High Value,1500.00,Apple Store
+2023-10-18,Coffee Shop,5.50,Starbucks
+2023-10-20,Unknown Charge - Suspicious,666.00,Unknown Merchant
+2023-10-25,Gym Membership,50.00,Planet Fitness

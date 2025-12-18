@@ -1,0 +1,188 @@
+{
+    "name": "Finance Intelligence Workflow",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "upload-csv",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "id": "webhook-trigger",
+            "name": "Webhook Trigger",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Base64 JSON Parser\nconst json = items[0].json;\n// Support both direct (content) and nested (body.content) structures\nconst base64Content = json.content || (json.body && json.body.content);\n\nif (!base64Content) {\n  return [{ json: { error: 'No content field found.', availableKeys: Object.keys(json).join(','), bodyKeys: json.body ? Object.keys(json.body).join(',') : 'no-body' } }];\n}\n\n// Decode\nconst content = Buffer.from(base64Content, 'base64').toString('utf8');\n\n// Parse CSV\nconst lines = content.split('\\n');\nconst headers = lines[0].split(',').map(h => h.trim());\nconst results = [];\n\nfor(let i=1; i<lines.length; i++) {\n   if(!lines[i].trim()) continue;\n   const vals = lines[i].split(',');\n   const obj = {};\n   headers.forEach((h, idx) => obj[h] = vals[idx]?.trim());\n   \n   // Clean amount\n   if (obj.amount) obj.amount = parseFloat(obj.amount.replace(/[^0-9.-]/g, ''));\n   \n   results.push({ json: obj });\n}\n\nreturn results;"
+            },
+            "id": "parse-data",
+            "name": "Parse Data",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                300,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://api.groq.com/openai/v1/chat/completions",
+                "authentication": "headerAuth",
+                "headerParametersUi": {
+                    "parameter": [
+                        {
+                            "name": "Authorization",
+                            "value": "Bearer <YOUR_GROQ_API_KEY>"
+                        }
+                    ]
+                },
+                "sendBody": true,
+                "bodyParametersUi": {
+                    "parameter": [
+                        {
+                            "name": "model",
+                            "value": "llama-3.1-8b-instant"
+                        },
+                        {
+                            "name": "messages",
+                            "value": "=[{\"role\": \"user\", \"content\": \"Analyze the following transaction and provide a category (e.g., Food, Transport, Utilities, Entertainment, Shopping, Health, Income) and a confidence score (0-1). Also flag if it looks like an anomaly (transaction > 500 or weird description). JSON format: { \\\"category\\\": \\\"Cat\\\", \\\"confidence\\\": 0.95, \\\"is_anomaly\\\": false }. \\n\\nTransaction: {{ $json.description }} - Amount: {{ $json.amount }}\"}]"
+                        },
+                        {
+                            "name": "response_format",
+                            "value": "{ \"type\": \"json_object\" }"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "id": "groq-categorize",
+            "name": "Groq Categorizer",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 1,
+            "position": [
+                500,
+                300
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "groq-cred-id",
+                    "name": "Groq Credentials"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Run Once for Each Item Mode\nif (item.json.error) {\n  throw new Error('Groq Error: ' + JSON.stringify(item.json.error));\n}\n\n// 1. Get Matching Original Data using Index\nconst index = $itemIndex;\nconst allOriginalItems = $('Parse Data').all();\n\nif (!allOriginalItems || !allOriginalItems[index]) {\n   throw new Error('Could not find original item at index ' + index);\n}\n\nconst originalItem = allOriginalItems[index].json;\n\n// Debug Check\nif (!originalItem || !originalItem.date) {\n     throw new Error('Found item at index ' + index + ' but it is missing date! Got: ' + JSON.stringify(originalItem));\n}\n\n// 2. Parse AI Response\nif (!item.json.choices || !item.json.choices[0]) {\n   throw new Error('No AI choices found');\n}\n\nconst content = item.json.choices[0].message.content;\ntry {\n    const parsed = JSON.parse(content);\n    \n    // 3. Fix Columns\n    if (parsed.confidence !== undefined) {\n        parsed.confidence_score = parsed.confidence;\n        delete parsed.confidence;\n    }\n\n    // 4. Merge\n    item.json = { ...originalItem, ...parsed };\n    return item;\n} catch (e) {\n    item.json.error = 'Failed to parse JSON';\n    return item;\n}"
+            },
+            "id": "parse-groq-response",
+            "name": "Parse Groq Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 1,
+            "position": [
+                600,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "tableId": "transactions",
+                "operation": "upsert",
+                "columns": "description, amount, date, merchant, category, confidence_score, is_anomaly",
+                "matchColumn": "id"
+            },
+            "id": "supabase-insert",
+            "name": "Supabase Insert",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                800,
+                300
+            ],
+            "credentials": {
+                "supabaseApi": {
+                    "id": "supabase-cred-id",
+                    "name": "Supabase Credentials"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "tableId": "execution_logs",
+                "operation": "insert",
+                "columns": "workflow_name, status, timestamp"
+            },
+            "id": "log-execution",
+            "name": "Log Execution",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                1000,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Data": {
+            "main": [
+                [
+                    {
+                        "node": "Groq Categorizer",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Groq Categorizer": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Groq Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Groq Response": {
+            "main": [
+                [
+                    {
+                        "node": "Supabase Insert",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Supabase Insert": {
+            "main": [
+                [
+                    {
+                        "node": "Log Execution",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}
