@@ -3,7 +3,7 @@
 > 
 > *Demonstrating enterprise-grade process automation, AI agent integration, and human-in-the-loop workflows.*
 
-![n8n Workflow Preview](https://via.placeholder.com/1200x600?text=n8n+Complex+Workflow+Architecture)
+![n8n Workflow Preview](public/n8n-workflow-preview.png)
 
 ## 🎯 Automation Engineering Highlights
 
