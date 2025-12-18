@@ -39,7 +39,28 @@ graph TD
     *   *Prompt Engineering:* "You are a financial analyst. Classify '${description}' and score anomaly probability 0-1."
 4.  **Database Sync:** Upserts enriched data into **Supabase** (PostgreSQL) with conflict resolution.
 
-## 🖥️ Frontend layer (Next.js)
+## � Project Structure
+
+Here is a quick overview of the codebase organization:
+
+```bash
+finance-intelligence-system/
+├── app/                    # Next.js App Router (Frontend + API)
+│   ├── api/                # Serverless API Routes (Report Gen, Upload, Reset)
+│   ├── reports/            # Generated Reports Page (PDF Export)
+│   ├── settings/           # System & Data Management
+│   ├── transactions/       # Transaction Grid with Actions
+│   └── upload/             # Drag-and-drop CSV Upload Zone
+├── components/             # Reusable UI Components (Shadcn + Tailwind)
+├── lib/                    # Shared Utilities (Supabase Client, Types)
+├── n8n/                    # Automation Workflows
+│   └── workflow.json       # The core "Brain" (Import this into n8n)
+├── supabase/               # Database Configuration
+│   └── schema.sql          # SQL Migration for Transactions/Reports tables
+└── public/                 # Static Assets
+```
+
+## �🖥️ Frontend layer (Next.js)
 
 While n8n handles the brains, a lightweight **Next.js** dashboard serves as the control plane for the user to upload files and view the resulting analytics.
 
