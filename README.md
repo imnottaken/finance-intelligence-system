@@ -60,7 +60,9 @@ finance-intelligence-system/
 └── public/                 # Static Assets
 ```
 
-## �🖥️ Frontend layer (Next.js)
+## 🖥️ Frontend layer (Next.js)
+
+![Dashboard Preview](public/dashboard-preview.png)
 
 While n8n handles the brains, a lightweight **Next.js** dashboard serves as the control plane for the user to upload files and view the resulting analytics.
 
