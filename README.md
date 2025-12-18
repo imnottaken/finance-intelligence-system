@@ -21,15 +21,15 @@ The core value lies in the **n8n orchestration layer**:
 
 ```mermaid
 graph TD
-    A[Webhook Trigger] -->|Base64 JSON| B(Parse & Validate)
-    B --> C{Data Valid?}
-    C -->|Yes| D[Split In Batches (10x)]
-    C -->|No| E[Return Error 400]
-    D --> F[AI Agent Node (Groq)]
-    F -->|Analyze Transaction| G[Structured Output Parser]
-    G --> H[Supabase (Upsert Transaction)]
+    A["Webhook Trigger"] -->|Base64 JSON| B("Parse & Validate")
+    B --> C{"Data Valid?"}
+    C -->|Yes| D["Split In Batches (10x)"]
+    C -->|No| E["Return Error 400"]
+    D --> F["AI Agent Node (Groq)"]
+    F -->|Analyze Transaction| G["Structured Output Parser"]
+    G --> H["Supabase (Upsert Transaction)"]
     H --> D
-    D -->|Done| I[Log Execution Metric]
+    D -->|Done| I["Log Execution Metric"]
 ```
 
 ### Technical Workflow Breakdown
